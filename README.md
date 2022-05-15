@@ -2,7 +2,7 @@
 The objective of this script to forward specific logs from an Elastic instance into an Azure Log Analytic workspace. The script utilizes the Data Collector API to push the data into a specifc workspace.
 
 ## Why
-An individual may need to transfer logs from their existing SIEM solution to Azure. In the event that certificates can't be genreated and added to ensure that Logstash functions, this script provides a simple way to transfer logs.An individual provides the script the date of the last transfer and ensures the reveleant queries are stored in `elastic_q.py`. The script then will proceed to query the Elastic instance and chunk the logs into smaller reuests to avoid Azure ingestion limits of 30MB per post request.
+An individual may need to transfer logs from their existing SIEM solution to Azure. In the event that certificates can't be genreated and added to ensure that Logstash functions, this script provides a simple way to transfer logs. An individual provides the script the date of the last transfer and ensures the reveleant queries are stored in `elastic_q.py`. The script then will proceed to query the Elastic instance and chunk the logs into smaller reuests to avoid Azure ingestion limits of 30MB per post request.
 
  
 ## CLI Flags
