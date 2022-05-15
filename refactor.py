@@ -15,9 +15,9 @@ from elastic_q import query_repo
 class Configs:
     tmp_log_name : str
 # Update the customer ID to your Log Analytics workspace ID
-    customer_id  :str ='fcee8395-b70e-4691-a6ad-febedb9b9368'
+    customer_id  :str ='XXXXXXX'
 # For the shared key, use either the primary or the secondary Connected Sources client authentication key   
-    shared_key : str ="3naHYH0+P6x7isSIjh2+jacPWcqV/lsIEUVmfQV5fwGoF+lWlzPKTjtBGNh1dLjzRQci4+yxChUlutsuP0rv7A=="
+    shared_key : str ="hohLlKlUF4qh02D2PEi0BdtKDbtZt2H0IoAvbBZ1i9JQIms2Jm1N8rQnLvJ2Kl7KsJ0TEzpDY/HS3T+D1gNRLg=="
 # The log type is the name of the event that is being submitted
     custom_table_name : str ='WebMonitorTest5'
 #Set the Time stamp to use on ingestion
@@ -46,7 +46,6 @@ def extract_recent_logs(log_data :dict,configs):
     # need another if statement for order : strong assumption of sorted 
     filtered_data = {}
     do_consume = True
-    pprint(configs)
     for index,log_hit in enumerate(log_data['hits']['hits']):
         if compare_timestamps(configs.last_sync_date, log_hit['fields'][configs.timestampfield][0]) is True:
             filtered_data[index] = log_hit['fields']
@@ -60,7 +59,6 @@ def extract_recent_logs(log_data :dict,configs):
     filtered_data['log_amt'] = log_amt
     filtered_data['other_field_cnt'] = 3  #hard coding for alpha
     logging.debug(f"extract recent logs returned")
-    pprint(filtered_data[0])
     return filtered_data, do_consume        
 
 
@@ -113,6 +111,7 @@ def initial_search(configs):
     #use for the first search
     answer=get_logs(configs.url, configs.query, configs.auth,query=query_repo['processes'])
     data = json.loads(answer.text)
+    post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,data,configs.timestampfield)  
     print(int(answer.headers['content-length'])/configs.divisor)
     chunk_flag= chunking_check(answer.headers['content-length'],configs)    
     if chunk_flag is True:
@@ -187,10 +186,10 @@ def post_data(customer_id, shared_key, custom_table_name,post_data,timestampfiel
     content_type = 'application/json'
     resource = '/api/logs'
     rfc1123date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
-    content_length = len(post_data)
+    formatted_data = json.dumps(post_data) 
+    content_length = len(formatted_data)   
     signature = build_signature(customer_id, shared_key, rfc1123date, content_length, method, content_type, resource)
     uri = 'https://' + customer_id + '.ods.opinsights.azure.us' + resource + '?api-version=2016-04-01'
-    
     #Aded time-generated-field. Data without time is useless.
     #May need tweaking.
     headers = {
@@ -199,16 +198,16 @@ def post_data(customer_id, shared_key, custom_table_name,post_data,timestampfiel
         'Log-Type': custom_table_name,
         'x-ms-date': rfc1123date,
         'time-generated-field': timestampfield
-    }
+    }     
     try:
-        response = requests.post(uri,data=json.dumps(post_data), headers=headers)
+        response = requests.post(uri,data=formatted_data, headers=headers); print(response.request.headers);
         if (response.status_code >= 200 and response.status_code <= 299):
             print('Accepted')
         else:
             print("Response code: {}".format(response.status_code))
-            logging.debug(f"Non 200 code {response.status_code}, message: {response.text}")
+            logging.debug(f"Non 200 code {response.status_code}, message: {response.text} headers:{headers}")
     except requests.exceptions.ConnectionError as con_error:
-        logging.error(f"connection failed to establish {con_error}")  
+        logging.error(f"connection failed to establish {con_error} {headers}")  
 
 
 def create_parser():
