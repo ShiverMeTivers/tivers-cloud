@@ -122,13 +122,13 @@ def initial_search(configs):
         for index, chunk in enumerate(chunked_data):
           print(len(chunk))  
           sort_index = extract_sort_index(chunk,True) # The assumption is the last log collected is the next index with asc order
-##        post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs)  
+          post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs.timestampfield)  
         logging.debug(f"initial search hit the chunking loop {index}")
         return sort_index
     else:
         parsed_logs, _ = extract_recent_logs(data,configs)
         sort_index = extract_sort_index(parsed_logs,True) # this will be made agnostic?? if we do reverse oder this function blows up
-##        post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs)  
+        post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs.timestampfield)  
         logging.debug(f"initial search returned {len(parsed_logs)} logs")
         return sort_index
     
