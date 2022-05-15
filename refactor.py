@@ -46,6 +46,7 @@ def extract_recent_logs(log_data :dict,configs):
     # need another if statement for order : strong assumption of sorted 
     filtered_data = {}
     do_consume = True
+    pprint(configs)
     for index,log_hit in enumerate(log_data['hits']['hits']):
         if compare_timestamps(configs.last_sync_date, log_hit['fields'][configs.timestampfield][0]) is True:
             filtered_data[index] = log_hit['fields']
@@ -218,7 +219,7 @@ def create_parser():
     parser.add_argument("-qcred","--elastic-cred",help="The elastic credentials to query for logs. formtat is username:xxxxxxxx",default=False)
     parser.add_argument("-ctab","--custom-table",help="The name of the custom table to create/push to in Log Analytics",default=False)
     parser.add_argument("-path",help="Give an absolute path to the directory to write debug output",default=False)
-    parser.add_argument("-timestamp",help="The last time the script was used. This will cause the script to gather most logs from current date till the provided timestamp. Format: 2022-05-02T03:58:51.000Z",default=False)
+    parser.add_argument("-timestamp",help="The last time the script was used. This will cause the script to gather most logs from current date till the provided timestamp. Format: 2022-05-02T03:58:51.000Z",       default=False)
     parser.add_argument("-divisor","--divisor-size", help="The unit used when displaying the amount of bytes receieved.",default=False)
     parser.add_argument("-binamt","--bin-amount", help="The amount of chunks to generate if the max-size is reached.",default=False)
     parser.add_argument("-maxsize","--max-postsize", help="The max amount of data that can be sent in a single request to Azure.",default=False)
@@ -226,31 +227,32 @@ def create_parser():
 
 def check_cli_values(cli_args,config):
     # need to pass the global config object to update the fields**
-    if cli_args.shared_key is True:
+    if cli_args.shared_key is not False:
         config.shared_key = cli_args.shared_key    
 
-    elif cli_args.workspace_id is True:
+    elif cli_args.workspace_id is not False:
         config.customer_id = cli_args.workspace_id
     
-    elif cli_args.elastic_cred is True:
+    elif cli_args.elastic_cred is not False:
         config.auth = cli_args.elastic_cred
     
-    elif cli_args.custom_table is True:
+    elif cli_args.custom_table is not False:
         config.custom_table_name = cli_args.custom_table    
     
-    elif cli_args.path is True:
+    elif cli_args.path is not False:
          config.tmp_log_dir = cli_args.path
 
-    elif cli_args.timestamp is True:
-         config.last_sync_date =cli_args.timestmap 
+    elif cli_args.timestamp is not False:
+         print(cli_args.timestamp)
+         config.last_sync_date =cli_args.timestamp 
   
-    elif cli_args.divisor_size is True:
+    elif cli_args.divisor_size is not False:
          config.divisor =cli_args.divisor_size 
   
-    elif cli_args.bin_amount is True:
+    elif cli_args.bin_amount is not False:
          config.bin_amt =cli_args.bin_amount
   
-    elif cli_args.max_postsize is True:
+    elif cli_args.max_postsize is not False:
          config.max_size =cli_args.max_postsize 
   
     else:
