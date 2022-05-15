@@ -1,7 +1,7 @@
-#Overview
+# Overview
 The objective of this script to forward specific logs from an Elastic instance into an Azure Log Analytic workspace. The script utilizes the Data Collector API to push the data into a specifc workspace.
 
-##Why
+## Why
 An individual may need to transfer logs from their existing SIEM solution to Azure. In the event that certificates can't be genreated and added to ensure that Logstash functions, this script provides a simple way to transfer logs.An individual provides the script the date of the last transfer and ensures the reveleant queries are stored in `elastic_q.py`. The script then will proceed to query the Elastic instance and chunk the logs into smaller reuests to avoid Azure ingestion limits of 30MB per post request.
 
  
@@ -30,12 +30,12 @@ The command line flags allow an user to overwrite the default values stored in t
                         The max amount of data that can be sent in a single request to Azure.
 ```
 ## TODO
-   Add additional Flags to set the bin_amount and the max message size
-   Add a failed queue and retry request
-   Generalize for elastic queries
+   Add additional Flags to set the bin_amount and the max message size  
+   Add a failed queue and retry request  
+   Generalize for elastic queries  
 
 ## References
-[Azure Monitor limits](https://docs.microsoft.com/en-us/azure/azure-monitor/service-limits)
-[The basic Microsoft Script](https://docs.microsoft.com/en-us/azure/azure-monitor/logs/data-collector-api)
+[Azure Monitor limits](https://docs.microsoft.com/en-us/azure/azure-monitor/service-limits)  
+[The basic Microsoft Script](https://docs.microsoft.com/en-us/azure/azure-monitor/logs/data-collector-api)  
 
 
