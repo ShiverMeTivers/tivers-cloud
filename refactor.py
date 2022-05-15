@@ -23,11 +23,11 @@ class Configs:
 #Set the Time stamp to use on ingestion
     timestampfield : str = '@timestamp'
 #IP address of Elastichsearch API
-    url: str = '10.3.0.6:9200/'
+    url: str = '10.3.0.4:9200/'
 #The specific command given to the API
     query: str = 'test-index/_search/?pretty'
 #Username and Password Auth
-    auth: str = 'so_elastic:ohcux2ShRX]i4|P,Lqh-[V)@X(<hRfluizvX)dSuGdp-L+~mXOJW<O*^L^S(+>4haXL&Y7~x'
+    auth: str = 'elastic:ckHJq*5nGSP6V212N_EU'
     #temp log directory
     tmp_log_dir : str = '/tmp/'
 #max log_size 28M 
@@ -44,7 +44,6 @@ logging.getLogger('urllib3').setLevel(logging.CRITICAL)
 
 def extract_recent_logs(log_data :dict,configs):
     # need another if statement for order : strong assumption of sorted 
-    pprint(log_data['hits']['hits'][0])
     filtered_data = {}
     do_consume = True
     for index,log_hit in enumerate(log_data['hits']['hits']):
@@ -90,7 +89,6 @@ def create_chunks(data, content_len, configs):
     #return a list of chunked data to avoid the size cap
 
     chunked_data = list()
-    #logging.debug(data)
     logs_amt = len(data)-data['other_field_cnt']
 #n-1 bins will have the even amount while nth will have the remainder 
     entries_per_bin = logs_amt//configs.bin_amt
@@ -115,11 +113,9 @@ def initial_search(configs):
     answer=get_logs(configs.url, configs.query, configs.auth,query=query_repo['processes'])
     data = json.loads(answer.text)
     print(int(answer.headers['content-length'])/configs.divisor)
-    logging.debug(data)
     chunk_flag= chunking_check(answer.headers['content-length'],configs)    
     if chunk_flag is True:
-        parsed_logs, consume_flag = extract_recent_logs(data,configs)
-        logging.debug(parsed_logs)
+        parsed_logs, _ = extract_recent_logs(data,configs)
         chunked_data = create_chunks(parsed_logs,answer.headers['content-length'],configs)
         sort_index =None
         for index, chunk in enumerate(chunked_data):
@@ -129,7 +125,7 @@ def initial_search(configs):
         logging.debug(f"initial search hit the chunking loop {index}")
         return sort_index
     else:
-        parsed_logs, consume_flag = extract_recent_logs(data,configs)
+        parsed_logs, _ = extract_recent_logs(data,configs)
         sort_index = extract_sort_index(parsed_logs,True) # this will be made agnostic?? if we do reverse oder this function blows up
 ##        post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs)  
         logging.debug(f"initial search returned {len(parsed_logs)} logs")
@@ -138,30 +134,32 @@ def initial_search(configs):
 def search_after(configs,sort_index: int ):
     #This function is called after the initial search and will continue to pull logs until the provided timestamp is reached
     fetch_flag = True
+    consume_flgag = True
     while fetch_flag is True:          
         query_repo['process_search_a']['search_after'][0] = sort_index # this is replacing a string in the elastic_q.py 
-        print(sort_index)
         answer=get_logs(configs.url,configs.query, configs.auth,query=query_repo['process_search_a'])
         data = json.loads(answer.text)
         chunk_flag= chunking_check(answer.headers['content-length'],configs)    
-        parsed_logs, consume_flag = extract_recent_logs(data,configs)
         if chunk_flag is True:
             logging.debug("search_after chunk")
+            parsed_logs, consume_flag = extract_recent_logs(data,configs)
             chunked_data = create_chunks(parsed_logs,answer.headers['content-length'],configs)
             for log_chunk in chunked_data:
                 sort_index = extract_sort_index(log_chunk,True) # assumes the desc order for oldest value
                 post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,log_chunk,configs.timestampfield)  # a lot of globals
+            if consume_flag is False:
+                fetch_flag= False
+                break
         else:
             try:
-                sort_index = extract_sort_index(parsed_logs)    
+                sort_index,consume_flag = extract_sort_index(data)    
                 logging.debug("search after ret")
                 post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs.timestampfield)  # a lot of globals
             except Exception as e_http:
                 logging.debug("hit the post",e_http)
                 fetch_flag = False
-        if consume_flag is False:
-            fetch_flag= False
-            break
+            if consume_flag is False:
+                fetch_flag= False
     return 
 
 def get_logs(url,endpoint,auth,**kwargs):
@@ -265,5 +263,4 @@ if __name__ == '__main__':
     cli_arg=parser.parse_args()
     config_global=check_cli_values(cli_arg,config_global)
     sort_vals = initial_search(config_global)
-    pprint(sort_vals)   
     search_after(config_global, sort_vals)

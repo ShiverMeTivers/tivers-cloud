@@ -4,7 +4,7 @@
 query_repo = {
 "processes":
 {
-  "size": 10,
+  "size": 10000,
   "_source": False,
   "query": {
     "match": {
@@ -24,7 +24,7 @@ query_repo = {
         }
 ]},
 "process_search_a":{ 
-"size": 10,
+"size": 10000,
 "_source": False,
 "query": {
     "match": {
