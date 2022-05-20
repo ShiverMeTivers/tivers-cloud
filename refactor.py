@@ -6,6 +6,7 @@ import hmac
 import base64
 import argparse 
 import logging  
+import urllib3
 from dataclasses import dataclass
 from pprint import pprint
 from elastic_q import query_repo 
@@ -40,7 +41,7 @@ class Configs:
 
 logging.basicConfig(filename="debug.txt",level=logging.DEBUG,encoding='utf-8',format="%(asctime)s -- %(message)s -- %(funcName)s")
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def extract_recent_logs(log_data :dict,configs):
     # need another if statement for order : strong assumption of sorted 
@@ -58,7 +59,7 @@ def extract_recent_logs(log_data :dict,configs):
     log_amt = len(log_data['hits']['hits'])
     filtered_data['log_amt'] = log_amt
     filtered_data['other_field_cnt'] = 3  #hard coding for alpha
-    logging.debug(f"extract recent logs returned")
+    logging.debug(f"Exiting extract func with {log_amt} recent logs")
     return filtered_data, do_consume        
 
 
@@ -79,7 +80,7 @@ def extract_sort_index(data : dict,sort_flag=True):
 
 def chunking_check(content_len,configs):
     # check if the request is over a specified size. 
-    logging.debug(f"the payload size {int(content_len)/1_000_000}")
+    logging.debug(f"the payload size {int(content_len)/1_000_000}Mb")
     if int(content_len) > configs.max_size:
         return True
     return False     
@@ -98,7 +99,7 @@ def create_chunks(data, content_len, configs):
             chunk.append(data[log_index])
         chunked_data.append(chunk)            
     last_chunk = list()
-    logging.debug(f" entries-per-bin: {entries_per_bin}, logs per bin: {configs.bin_amt},  total logs: {logs_amt}")
+    logging.debug(f" logs per bin: {entries_per_bin}, amount of bins: {configs.bin_amt},  total logs: {logs_amt}")
     for log_index in range(entries_per_bin*(configs.bin_amt-1),logs_amt,1):
             last_chunk.append(data[log_index])
     chunked_data.append(last_chunk)
@@ -122,13 +123,13 @@ def initial_search(configs):
           print(len(chunk))  
           sort_index = extract_sort_index(chunk,True) # The assumption is the last log collected is the next index with asc order
           post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs.timestampfield)  
-        logging.debug(f"initial search hit the chunking loop {index}")
+        logging.debug(f"initiat search returning sort-index: {sort_index}")
         return sort_index
     else:
         parsed_logs, _ = extract_recent_logs(data,configs)
         sort_index = extract_sort_index(parsed_logs,True) # this will be made agnostic?? if we do reverse oder this function blows up
         post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs.timestampfield)  
-        logging.debug(f"initial search returned {len(parsed_logs)} logs")
+        logging.debug(f"initial search returned {len(parsed_logs)} logs and sort_index: {sort_index}")
         return sort_index
     
 def search_after(configs,sort_index: int ):
@@ -141,7 +142,6 @@ def search_after(configs,sort_index: int ):
         data = json.loads(answer.text)
         chunk_flag= chunking_check(answer.headers['content-length'],configs)    
         if chunk_flag is True:
-            logging.debug("search_after chunk")
             parsed_logs, consume_flag = extract_recent_logs(data,configs)
             chunked_data = create_chunks(parsed_logs,answer.headers['content-length'],configs)
             for log_chunk in chunked_data:
@@ -153,10 +153,10 @@ def search_after(configs,sort_index: int ):
         else:
             try:
                 sort_index,consume_flag = extract_sort_index(data)    
-                logging.debug("search after ret")
+                logging.debug("Non-chunking path return values {sort_index}:{consume_flag}")
                 post_data(configs.customer_id, configs.shared_key, configs.custom_table_name,parsed_logs,configs.timestampfield)  # a lot of globals
             except Exception as e_http:
-                logging.debug("hit the post",e_http)
+                logging.debug("Request exception in non-chunking",e_http)
                 fetch_flag = False
             if consume_flag is False:
                 fetch_flag= False
@@ -212,7 +212,7 @@ def post_data(customer_id, shared_key, custom_table_name,post_data,timestampfiel
 
 def create_parser():
     #this function generates the cli arugment parser to allow for quicker customization and allow future personnel to understand the purpose..
-    parser = argparse.ArgumentParser(description="This script pulls logs from the given elastic instance into the Hyperscale Log Analytics workspace. The default actions of the script will use the hardcoded creds (I know!) otherwise it will use the cli vlaues.")
+    parser = argparse.ArgumentParser(description="This script pulls logs from the given elastic instance into the Hyperscale Log Analytics workspace. The default actions of the script will use the hardcoded creds otherwise it will use the cli vlaues.")
     parser.add_argument("-skey","--shared-key",help="the shared key/credential for accessing the Log analytics workspace",default=False)
     parser.add_argument("-id","--workspace-id",help="The workspace id of the log analytics workspace.",default=False)
     parser.add_argument("-qcred","--elastic-cred",help="The elastic credentials to query for logs. formtat is username:xxxxxxxx",default=False)
