@@ -10,10 +10,11 @@ import base64
 ##### ##### ##### ##### ##### ##### 
 
 # Update the customer ID to your Log Analytics workspace ID
-customer_id = 'fcee8395-b70e-4691-a6ad-febedb9b9368'
+#customer_id = 'fcee8395-b70e-4691-a6ad-febedb9b9368'
 
-# For the shared key, use either the primary or the secondary Connected Sources client authentication key   
-shared_key = "3naHYH0+P6x7isSIjh2+jacPWcqV/lsIEUVmfQV5fwGoF+lWlzPKTjtBGNh1dLjzRQci4+yxChUlutsuP0rv7A=="
+customer_id  :str ='c026e3df-e83b-40be-96b3-5bb631f9a67e'
+shared_key : str ="hohLlKlUF4qh02D2PEi0BdtKDbtZt2H0IoAvbBZ1i9JQIms2Jm1N8rQnLvJ2Kl7KsJ0TEzpDY/HS3T+D1gNRLg=="
+#shared_key = "3naHYH0+P6x7isSIjh2+jacPWcqV/lsIEUVmfQV5fwGoF+lWlzPKTjtBGNh1dLjzRQci4+yxChUlutsuP0rv7A=="
 
 # The log type is the name of the event that is being submitted
 log_type = 'WebMonitorTest5'
@@ -126,6 +127,7 @@ def post_data(customer_id, shared_key, log_type,tmp_log_dir, tmp_log_name):
         'x-ms-date': rfc1123date,
         'time-generated-field': timestampfield
     }
+    print(headers)
 
     response = requests.post(uri,data=post_data1, headers=headers)
     if (response.status_code >= 200 and response.status_code <= 299):

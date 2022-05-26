@@ -1,0 +1,6 @@
+*_pycache
+*.pyc
+pat
+__pycache__/
+debug.txt
+*.swp
